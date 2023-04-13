@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  my-data-generator:
+    build: .
+    image: my-data-generator
+    depends_on:
+      - mongodb
+    volumes:
+      - "./__main__.py:/app/__main__.py"
+    networks:
+      - my-network
+
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - "./data:/data/db"
+    networks:
+      - my-network
+
+networks:
+  my-network:
