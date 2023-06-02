@@ -1,15 +1,23 @@
 version: "3.9"
 
 services:
-  my-data-generator:
-    build: .
-    image: my-data-generator
+  data-generator:
+    build: ./data-generator
+    image: data-generator
+    container_name: data-generator
     depends_on:
       - mongodb
     volumes:
-      - "./__main__.py:/app/__main__.py"
-    networks:
-      - my-network
+      - "./data-generator/__main__.py:/app/__main__.py"
+
+  data-reader:
+    build: ./data-reader
+    container_name: data-reader
+    image: data-reader
+    depends_on:
+      - mongodb
+    volumes:
+      - "./data-reader/__main__.py:/app/__main__.py"
 
   mongodb:
     image: mongo
@@ -18,8 +26,73 @@ services:
       - "27017:27017"
     volumes:
       - "./data:/data/db"
-    networks:
-      - my-network
 
-networks:
-  my-network:
+  charts:
+    build:
+      context: "charts"
+      args:
+        - EMAIL=admin@gmail.com
+        - PASSWORD=admin
+    image: charts
+    ports:
+      - 8080:80
+    environment:
+      CHARTS_SUPPORT_WIDGET_AND_METRICS: "on"
+      CHARTS_MONGODB_URI: "mongodb://mongo:27017/admin?replicaSet=rs0"
+    volumes:
+      - keys:/mongodb-charts/volumes/keys
+      - logs:/mongodb-charts/volumes/logs
+      - db-certs:/mongodb-charts/volumes/db-certs
+      - web-certs:/mongodb-charts/volumes/web-certs
+    depends_on:
+      - mongodb
+    container_name: charts
+
+  # grafana:
+  #   image: grafana/grafana:8.2.2
+  #   container_name: grafana
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - data-reader
+  #   environment:
+  #     GF_INSTALL_PLUGINS: grafana-clock-panel
+  #     GF_SECURITY_ADMIN_PASSWORD: admin
+  #   command: bash -c "grafana-cli plugins install elasticsearch && grafana-server"
+  #   networks:
+  #     - my-network
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+
+  # db:
+  #   image: postgres
+  #   container_name: postgres
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: mydatabase
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - ./pgdata:/var/lib/postgresql/data
+  #     - ./pg_hba.conf:/etc/postgresql/pg_hba.conf
+  #   command: postgres -c config_file=/etc/postgresql/pg_hba.conf -D /var/lib/postgresql/data
+
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.13.4
+  #   container_name: elasticsearch
+  #   ports:
+  #     - "9200:9200"
+  #   environment:
+  #     - discovery.type=single-node
+  #   networks:
+  #     - my-network
+
+volumes:
+  mongo-data:
+  grafana-data:
+  keys:
+  logs:
+  db-certs:
+  web-certs:
